@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title></title>
+    <script src="babylon.math.js"></script>
+</head>
+<body>
+    <div id="logs">Benchmarks are running...<br><br></div>
+    <script>
+        function log(str) {
+            console.log(str);
+            logs.innerHTML += str + '<br>';
+        }
+
+        var logs = document.getElementById("logs");
+        var testsCount = 50000000;
+        var N = 500;
+        var array = new Float32Array(16);
+        for (var i = 0; i < 16; ++i) {
+            array[i] = i * 0.1;
+        }
+
+        var m0 = BABYLON.Matrix.FromArray(array);
+        var m1 = BABYLON.Matrix.FromArray(array);
+
+        var result = BABYLON.Matrix.FromArray(array);
+        var resultSIMD = BABYLON.Matrix.FromArray(array);
+        var resultArray = new Float32Array(16 * N);
+        var resultArraySIMD = new Float32Array(16 * N);
+
+        function bench_multiplyToArray() {
+            log('----- multiplyToArray -----');
+            var regular_start = performance.now();
+            for (var index = 0; index < testsCount; index++) {
+                m0.multiplyToArray(m1, resultArray, (index % N) * 16);
+            }
+            var regular_duration = performance.now() - regular_start;
+            log('Scalar: ' + regular_duration + 'ms');
+
+            var simd_start = performance.now();
+            for (index = 0; index < testsCount; index++) {
+                m0.multiplyToArraySIMD(m1, resultArraySIMD, (index % N) * 16);
+            }
+            var simd_duration = performance.now() - simd_start;
+            log('SIMD: ' + simd_duration + 'ms');
+
+            var equal = true;
+            for (var i = 0; i < N * 16; ++i) {
+                if (resultArray[i] - resultArraySIMD[i] > 0.001) {
+                    equal = false;
+                    log('not equal: ' + i + ' ' + resultArray[i] + ', ' + resultArraySIMD[i]);
+                }
+            }
+
+            if (equal) {
+                log("Checksums are equal.");
+                log('Speedup: ' + regular_duration / simd_duration);
+            } else {
+                log("Cheksums are not equal.");
+            }
+            log('');
+            setTimeout(log('Benchmarks complete.'), 1);
+        }
+
+        function main() {
+            setTimeout(bench_multiplyToArray, 1)
+        }
+
+        window.onload = setTimeout(main, 1);
+    </script>
+</body>
+</html>
