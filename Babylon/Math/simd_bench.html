@@ -20,16 +20,16 @@
             array[i] = i * 0.1;
         }
 
-        var m0 = BABYLON.Matrix.FromArray(array);
-        var m1 = BABYLON.Matrix.FromArray(array);
+        function benchMatrixmultiplyToArray() {
+            log('----- Matrix.multiplyToArray -----');
+            var m0 = BABYLON.Matrix.FromArray(array);
+            var m1 = BABYLON.Matrix.FromArray(array);
 
-        var result = BABYLON.Matrix.FromArray(array);
-        var resultSIMD = BABYLON.Matrix.FromArray(array);
-        var resultArray = new Float32Array(16 * N);
-        var resultArraySIMD = new Float32Array(16 * N);
+            var result = BABYLON.Matrix.FromArray(array);
+            var resultSIMD = BABYLON.Matrix.FromArray(array);
+            var resultArray = new Float32Array(16 * N);
+            var resultArraySIMD = new Float32Array(16 * N);
 
-        function bench_multiplyToArray() {
-            log('----- multiplyToArray -----');
             var regular_start = performance.now();
             for (var index = 0; index < testsCount; index++) {
                 m0.multiplyToArray(m1, resultArray, (index % N) * 16);
@@ -59,11 +59,83 @@
                 log("Cheksums are not equal.");
             }
             log('');
+            setTimeout(benchVector3TransformCoordinatesToRef, 1);
+        }
+
+        function benchVector3TransformCoordinatesToRef() {
+            log('----- Vector3.TransformCoordinatesToRef -----');
+            var src = new BABYLON.Vector3(0.1, 0.2, 0.3);
+            var dst = new BABYLON.Vector3(0.0, 0.0, 0.0);
+            var srcSIMD = new BABYLON.Vector3(0.1, 0.2, 0.3);
+            var dstSIMD = new BABYLON.Vector3(0.0, 0.0, 0.0);
+
+            var m = BABYLON.Matrix.FromArray(array);
+
+            var regular_start = performance.now();
+            for (var index = 0; index < testsCount; index++) {
+                BABYLON.Vector3.TransformCoordinatesToRef(src, m, dst);
+            }
+            var regular_duration = performance.now() - regular_start;
+            log('Scalar: ' + regular_duration + 'ms');
+
+            var simd_start = performance.now();
+            for (index = 0; index < testsCount; index++) {
+                BABYLON.Vector3.TransformCoordinatesToRefSIMD(srcSIMD, m, dstSIMD);
+            }
+            var simd_duration = performance.now() - simd_start;
+            log('SIMD: ' + simd_duration + 'ms');
+
+            var equal = dst.equals(dstSIMD);
+
+            if (equal) {
+                log("Checksums are equal.");
+                log('Speedup: ' + regular_duration / simd_duration);
+            } else {
+                console.log(dst);
+                console.log(dstSIMD);
+                log("Cheksums are not equal.");
+            }
+            log('');
+            setTimeout(benchVector3TransformCoordinatesFromFloatsToRef, 1);
+        }
+
+        function benchVector3TransformCoordinatesFromFloatsToRef() {
+            log('----- Vector3.TransformCoordinatesFromFloatsToRef -----');
+            var dst = new BABYLON.Vector3(0.0, 0.0, 0.0);
+            var dstSIMD = new BABYLON.Vector3(0.0, 0.0, 0.0);
+
+            var m = BABYLON.Matrix.FromArray(array);
+
+            var regular_start = performance.now();
+            for (var index = 0; index < testsCount; index++) {
+                BABYLON.Vector3.TransformCoordinatesFromFloatsToRef(0.1, 0.2, 0.3, m, dst);
+            }
+            var regular_duration = performance.now() - regular_start;
+            log('Scalar: ' + regular_duration + 'ms');
+
+            var simd_start = performance.now();
+            for (index = 0; index < testsCount; index++) {
+                BABYLON.Vector3.TransformCoordinatesFromFloatsToRefSIMD(0.1, 0.2, 0.3, m, dstSIMD);
+            }
+            var simd_duration = performance.now() - simd_start;
+            log('SIMD: ' + simd_duration + 'ms');
+
+            var equal = dst.equals(dstSIMD);
+
+            if (equal) {
+                log("Checksums are equal.");
+                log('Speedup: ' + regular_duration / simd_duration);
+            } else {
+                console.log(dst);
+                console.log(dstSIMD);
+                log("Cheksums are not equal.");
+            }
+            log('');
             setTimeout(log('Benchmarks complete.'), 1);
         }
 
         function main() {
-            setTimeout(bench_multiplyToArray, 1)
+            setTimeout(benchMatrixmultiplyToArray, 1);
         }
 
         window.onload = setTimeout(main, 1);
