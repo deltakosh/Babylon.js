@@ -668,11 +668,39 @@ var BABYLON;
             result.y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]);
             result.z = (vector.x * transformation.m[2]) + (vector.y * transformation.m[6]) + (vector.z * transformation.m[10]);
         };
+        Vector3.TransformNormalToRefSIMD = function (vector, transformation, result) {
+            var v = SIMD.float32x4.loadXYZ(vector.data, 0);
+            var m0 = SIMD.float32x4.load(transformation.m, 0);
+            var m1 = SIMD.float32x4.load(transformation.m, 4);
+            var m2 = SIMD.float32x4.load(transformation.m, 8);
+            SIMD.float32x4.storeXYZ(
+                result.data, 0,
+                SIMD.float32x4.add(
+                    SIMD.float32x4.add(
+                        SIMD.float32x4.mul(SIMD.float32x4.swizzle(v, 0, 0, 0, 0), m0),
+                        SIMD.float32x4.mul(SIMD.float32x4.swizzle(v, 1, 1, 1, 1), m1)),
+                    SIMD.float32x4.mul(SIMD.float32x4.swizzle(v, 2, 2, 2, 2), m2)));
+        }
         Vector3.TransformNormalFromFloatsToRef = function (x, y, z, transformation, result) {
             result.x = (x * transformation.m[0]) + (y * transformation.m[4]) + (z * transformation.m[8]);
             result.y = (x * transformation.m[1]) + (y * transformation.m[5]) + (z * transformation.m[9]);
             result.z = (x * transformation.m[2]) + (y * transformation.m[6]) + (z * transformation.m[10]);
         };
+        Vector3.TransformNormalFromFloatsToRefSIMD = function (x, y, z, transformation, result) {
+            var v0 = SIMD.float32x4.splat(x);
+            var v1 = SIMD.float32x4.splat(y);
+            var v2 = SIMD.float32x4.splat(z);
+            var m0 = SIMD.float32x4.load(transformation.m, 0);
+            var m1 = SIMD.float32x4.load(transformation.m, 4);
+            var m2 = SIMD.float32x4.load(transformation.m, 8);
+            SIMD.float32x4.storeXYZ(
+                result.data, 0,
+                SIMD.float32x4.add(
+                    SIMD.float32x4.add(
+                        SIMD.float32x4.mul(v0, m0),
+                        SIMD.float32x4.mul(v1, m1)),
+                    SIMD.float32x4.mul(v2, m2)));
+        }
         Vector3.CatmullRom = function (value1, value2, value3, value4, amount) {
             var squared = amount * amount;
             var cubed = amount * squared;
