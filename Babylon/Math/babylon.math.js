@@ -1918,6 +1918,104 @@ var BABYLON;
             var ez = -Vector3.Dot(this._zAxis, eye);
             return Matrix.FromValuesToRef(this._xAxis.x, this._yAxis.x, this._zAxis.x, 0, this._xAxis.y, this._yAxis.y, this._zAxis.y, 0, this._xAxis.z, this._yAxis.z, this._zAxis.z, 0, ex, ey, ez, 1, result);
         };
+        Matrix.LookAtLHToRefSIMD = function (eyeRef, targetRef, upRef, result) {
+            var out = result.m;
+            var center = SIMD.float32x4.loadXYZ(targetRef.data, 0);
+            var eye = SIMD.float32x4.loadXYZ(eyeRef.data, 0);
+            var up = SIMD.float32x4.loadXYZ(upRef.data, 0);
+
+            // cc.kmVec3Subtract(f, pCenter, pEye);
+            var f = SIMD.float32x4.sub(center, eye);
+            // cc.kmVec3Normalize(f, f);    
+            var tmp = SIMD.float32x4.mul(f, f);
+            tmp = SIMD.float32x4.add(tmp, SIMD.float32x4.add(SIMD.float32x4.swizzle(tmp, 1, 2, 0, 3), SIMD.float32x4.swizzle(tmp, 2, 0, 1, 3)));
+            f = SIMD.float32x4.mul(f, SIMD.float32x4.reciprocalSqrt(tmp));
+
+            // cc.kmVec3Assign(up, pUp);
+            // cc.kmVec3Normalize(up, up);
+            tmp = SIMD.float32x4.mul(up, up);
+            tmp = SIMD.float32x4.add(tmp, SIMD.float32x4.add(SIMD.float32x4.swizzle(tmp, 1, 2, 0, 3), SIMD.float32x4.swizzle(tmp, 2, 0, 1, 3)));
+            up = SIMD.float32x4.mul(up, SIMD.float32x4.reciprocalSqrt(tmp));
+
+            // cc.kmVec3Cross(s, f, up);
+            var s = SIMD.float32x4.sub(SIMD.float32x4.mul(SIMD.float32x4.swizzle(f, 1, 2, 0, 3), SIMD.float32x4.swizzle(up, 2, 0, 1, 3)),
+                                       SIMD.float32x4.mul(SIMD.float32x4.swizzle(f, 2, 0, 1, 3), SIMD.float32x4.swizzle(up, 1, 2, 0, 3)));
+            // cc.kmVec3Normalize(s, s);
+            tmp = SIMD.float32x4.mul(s, s);
+            tmp = SIMD.float32x4.add(tmp, SIMD.float32x4.add(SIMD.float32x4.swizzle(tmp, 1, 2, 0, 3), SIMD.float32x4.swizzle(tmp, 2, 0, 1, 3)));
+            s = SIMD.float32x4.mul(s, SIMD.float32x4.reciprocalSqrt(tmp));
+
+            // cc.kmVec3Cross(u, s, f);
+            var u = SIMD.float32x4.sub(SIMD.float32x4.mul(SIMD.float32x4.swizzle(s, 1, 2, 0, 3), SIMD.float32x4.swizzle(f, 2, 0, 1, 3)),
+                                       SIMD.float32x4.mul(SIMD.float32x4.swizzle(s, 2, 0, 1, 3), SIMD.float32x4.swizzle(f, 1, 2, 0, 3)));
+            // cc.kmVec3Normalize(s, s);
+            tmp = SIMD.float32x4.mul(s, s);
+            tmp = SIMD.float32x4.add(tmp, SIMD.float32x4.add(SIMD.float32x4.swizzle(tmp, 1, 2, 0, 3), SIMD.float32x4.swizzle(tmp, 2, 0, 1, 3)));
+            s = SIMD.float32x4.mul(s, SIMD.float32x4.reciprocalSqrt(tmp));
+
+            //cc.kmMat4Identity(pOut);
+            //pOut.mat[0] = s.x;
+            //pOut.mat[4] = s.y;
+            //pOut.mat[8] = s.z;
+            //pOut.mat[1] = u.x;
+            //pOut.mat[5] = u.y;
+            //pOut.mat[9] = u.z;
+            //pOut.mat[2] = -f.x;
+            //pOut.mat[6] = -f.y;
+            //pOut.mat[10] = -f.z;
+            var zero = SIMD.float32x4.splat(0.0);
+            s = SIMD.float32x4.neg(s);
+            var tmp01 = SIMD.float32x4.shuffle(s, u, 0, 1, 4, 5);
+            var tmp23 = SIMD.float32x4.shuffle(f, zero, 0, 1, 4, 5);
+            var a0  = SIMD.float32x4.shuffle(tmp01, tmp23, 0, 2, 4, 6);
+            var a1  = SIMD.float32x4.shuffle(tmp01, tmp23, 1, 3, 5, 7);
+
+            var tmp01 = SIMD.float32x4.shuffle(s, u, 2, 3, 6, 7);
+            var tmp23 = SIMD.float32x4.shuffle(f, zero, 2, 3, 6, 7);
+            var a2  = SIMD.float32x4.shuffle(tmp01, tmp23, 0, 2, 4, 6);
+            var a3  = SIMD.float32x4(0.0, 0.0, 0.0, 1.0);
+
+            // cc.kmMat4Translation(translate, -pEye.x, -pEye.y, -pEye.z);
+            var b0 = SIMD.float32x4(1.0, 0.0, 0.0, 0.0);
+            var b1 = SIMD.float32x4(0.0, 1.0, 0.0, 0.0);
+            var b2 = SIMD.float32x4(0.0, 0.0, 1.0, 0.0);
+            var b3 = SIMD.float32x4.neg(eye);
+            b3 = SIMD.float32x4.withW(b3, 1.0);
+
+            // cc.kmMat4Multiply(pOut, pOut, translate);
+            SIMD.float32x4.store(out, 0, SIMD.float32x4.add(
+                SIMD.float32x4.mul(
+                    SIMD.float32x4.swizzle(b0, 0, 0, 0, 0), a0),
+                    SIMD.float32x4.add(
+                         SIMD.float32x4.mul(SIMD.float32x4.swizzle(b0, 1, 1, 1, 1), a1),
+                         SIMD.float32x4.add(
+                              SIMD.float32x4.mul(SIMD.float32x4.swizzle(b0, 2, 2, 2, 2), a2),
+                              SIMD.float32x4.mul(SIMD.float32x4.swizzle(b0, 3, 3, 3, 3), a3)))));
+            SIMD.float32x4.store(out, 4, SIMD.float32x4.add(
+                SIMD.float32x4.mul(
+                    SIMD.float32x4.swizzle(b1, 0, 0, 0, 0), a0),
+                    SIMD.float32x4.add(
+                        SIMD.float32x4.mul(SIMD.float32x4.swizzle(b1, 1, 1, 1, 1), a1),
+                        SIMD.float32x4.add(
+                             SIMD.float32x4.mul(SIMD.float32x4.swizzle(b1, 2, 2, 2, 2), a2),
+                             SIMD.float32x4.mul(SIMD.float32x4.swizzle(b1, 3, 3, 3, 3), a3)))));
+            SIMD.float32x4.store(out, 8, SIMD.float32x4.add(
+                SIMD.float32x4.mul(
+                    SIMD.float32x4.swizzle(b2, 0, 0, 0, 0), a0),
+                    SIMD.float32x4.add(
+                        SIMD.float32x4.mul(SIMD.float32x4.swizzle(b2, 1, 1, 1, 1), a1),
+                        SIMD.float32x4.add(
+                             SIMD.float32x4.mul(SIMD.float32x4.swizzle(b2, 2, 2, 2, 2), a2),
+                             SIMD.float32x4.mul(SIMD.float32x4.swizzle(b2, 3, 3, 3, 3), a3)))));
+            SIMD.float32x4.store(out, 12, SIMD.float32x4.add(
+                SIMD.float32x4.mul(
+                    SIMD.float32x4.swizzle(b3, 0, 0, 0, 0), a0),
+                    SIMD.float32x4.add(
+                        SIMD.float32x4.mul(SIMD.float32x4.swizzle(b3, 1, 1, 1, 1), a1),
+                        SIMD.float32x4.add(
+                            SIMD.float32x4.mul(SIMD.float32x4.swizzle(b3, 2, 2, 2, 2), a2),
+                            SIMD.float32x4.mul(SIMD.float32x4.swizzle(b3, 3, 3, 3, 3), a3)))));
+        }
         Matrix.OrthoLH = function (width, height, znear, zfar) {
             var matrix = Matrix.Zero();
             Matrix.OrthoLHToRef(width, height, znear, zfar, matrix);
