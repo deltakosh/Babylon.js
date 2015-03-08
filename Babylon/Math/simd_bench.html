@@ -203,6 +203,89 @@
                 log("Cheksums are not equal.");
             }
             log('');
+            setTimeout(benchMatrixinvertToRef, 1);
+        }
+
+        function benchMatrixinvertToRef() {
+            log('----- Matrix.invertToRef -----');
+            var m = BABYLON.Matrix.FromArray([0, 1, 2, 3, -1, -2, -3, -4, 0, 0, 2, 3, -1, -2, 0, -4]);
+            var mx4 = BABYLON.Matrix.FromArray([0, 1, 2, 3, -1, -2, -3, -4, 0, 0, 2, 3, -1, -2, 0, -4]);
+
+            var result = new BABYLON.Matrix;
+            var resultx4 = new BABYLON.Matrix;
+
+            var regular_start = performance.now();
+            for (var index = 0; index < testsCount; index++) {
+                m.invertToRef(result);
+            }
+            var regular_duration = performance.now() - regular_start;
+            log('Scalar: ' + regular_duration + 'ms');
+
+            var simd_start = performance.now();
+            for (index = 0; index < testsCount; index++) {
+                mx4.invertToRefSIMD(resultx4);
+            }
+            var simd_duration = performance.now() - simd_start;
+            log('SIMD: ' + simd_duration + 'ms');
+
+            var equal = true;
+            for (var i = 0; i < 16; ++i) {
+                if (Math.abs(result.m[i] - resultx4.m[i]) > 0.001) {
+                    equal = false;
+                    log('not equal: ' + i + ' ' + result[i] + ', ' + resultx4[i]);
+                }
+            }
+
+            if (equal) {
+                log("Checksums are equal.");
+                log('Speedup: ' + regular_duration / simd_duration);
+            } else {
+                log("Cheksums are not equal.");
+            }
+            log('');
+            setTimeout(benchMatrixLookAtLHToReff, 1);
+        }
+
+        function benchMatrixLookAtLHToReff() {
+            log('----- Matrix.LookAtLHToRef -----');
+            var m = BABYLON.Matrix.FromArray(array);
+            var mx4 = BABYLON.Matrix.FromArray(array);
+            var eye = new BABYLON.Vector3(0, 1, 2);
+            var target = new BABYLON.Vector3(2, 1, 0);
+            var up = new BABYLON.Vector3(1, 1, 1);
+
+            var result = new BABYLON.Matrix;
+            var resultx4 = new BABYLON.Matrix;
+
+            var regular_start = performance.now();
+            for (var index = 0; index < testsCount; index++) {
+                BABYLON.Matrix.LookAtLHToRef(eye, target, up, result);
+            }
+            var regular_duration = performance.now() - regular_start;
+            log('Scalar: ' + regular_duration + 'ms');
+
+            var simd_start = performance.now();
+            for (index = 0; index < testsCount; index++) {
+                BABYLON.Matrix.LookAtLHToRefSIMD(eye, target, up, resultx4);
+            }
+            var simd_duration = performance.now() - simd_start;
+            log('SIMD: ' + simd_duration + 'ms');
+
+            var equal = true;
+            for (var i = 0; i < 16; ++i) {
+                if (Math.abs(result.m[i] - resultx4.m[i]) > 0.001) {
+                    equal = false;
+                    log('not equal: ' + i + ' ' + result[i] + ', ' + resultx4[i]);
+                }
+            }
+
+            if (equal) {
+                log("Checksums are equal.");
+                log('Speedup: ' + regular_duration / simd_duration);
+            } else {
+                log("Cheksums are not equal.");
+            }
+            log('');
             setTimeout(log('Benchmarks complete.'), 1);
         }
 
