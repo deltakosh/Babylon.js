@@ -46,7 +46,7 @@
 
             var equal = true;
             for (var i = 0; i < N * 16; ++i) {
-                if (resultArray[i] - resultArraySIMD[i] > 0.001) {
+                if (Math.abs(resultArray[i] - resultArraySIMD[i]) > 0.001) {
                     equal = false;
                     log('not equal: ' + i + ' ' + resultArray[i] + ', ' + resultArraySIMD[i]);
                 }
@@ -85,7 +85,7 @@
             var simd_duration = performance.now() - simd_start;
             log('SIMD: ' + simd_duration + 'ms');
 
-            var equal = dst.equals(dstSIMD);
+            var equal = Math.abs(dst.x - dstSIMD.x) < 0.001 && Math.abs(dst.y - dstSIMD.y) < 0.001 && Math.abs(dst.z - dstSIMD.z) < 0.001;
 
             if (equal) {
                 log("Checksums are equal.");
@@ -120,7 +120,79 @@
             var simd_duration = performance.now() - simd_start;
             log('SIMD: ' + simd_duration + 'ms');
 
-            var equal = dst.equals(dstSIMD);
+            var equal = Math.abs(dst.x - dstSIMD.x) < 0.001 && Math.abs(dst.y - dstSIMD.y) < 0.001 && Math.abs(dst.z - dstSIMD.z) < 0.001;
+
+            if (equal) {
+                log("Checksums are equal.");
+                log('Speedup: ' + regular_duration / simd_duration);
+            } else {
+                console.log(dst);
+                console.log(dstSIMD);
+                log("Cheksums are not equal.");
+            }
+            log('');
+            setTimeout(benchVector3TransformNormalToRef, 1);
+        }
+
+        function benchVector3TransformNormalToRef() {
+            log('----- Vector3.TransformNormalToRef -----');
+            var src = new BABYLON.Vector3(0.1, 0.2, 0.3);
+            var dst = new BABYLON.Vector3(0.0, 0.0, 0.0);
+            var srcSIMD = new BABYLON.Vector3(0.1, 0.2, 0.3);
+            var dstSIMD = new BABYLON.Vector3(0.0, 0.0, 0.0);
+
+            var m = BABYLON.Matrix.FromArray(array);
+
+            var regular_start = performance.now();
+            for (var index = 0; index < testsCount; index++) {
+                BABYLON.Vector3.TransformNormalToRef(src, m, dst);
+            }
+            var regular_duration = performance.now() - regular_start;
+            log('Scalar: ' + regular_duration + 'ms');
+
+            var simd_start = performance.now();
+            for (index = 0; index < testsCount; index++) {
+                BABYLON.Vector3.TransformNormalToRefSIMD(srcSIMD, m, dstSIMD);
+            }
+            var simd_duration = performance.now() - simd_start;
+            log('SIMD: ' + simd_duration + 'ms');
+
+            var equal = Math.abs(dst.x - dstSIMD.x) < 0.001 && Math.abs(dst.y - dstSIMD.y) < 0.001 && Math.abs(dst.z - dstSIMD.z) < 0.001;
+
+            if (equal) {
+                log("Checksums are equal.");
+                log('Speedup: ' + regular_duration / simd_duration);
+            } else {
+                console.log(dst);
+                console.log(dstSIMD);
+                log("Cheksums are not equal.");
+            }
+            log('');
+            setTimeout(TransformNormalFromFloatsToRef, 1);
+        }
+
+        function TransformNormalFromFloatsToRef() {
+            log('----- Vector3.TransformNormalFromFloatsToRef -----');
+            var dst = new BABYLON.Vector3(0.0, 0.0, 0.0);
+            var dstSIMD = new BABYLON.Vector3(0.0, 0.0, 0.0);
+
+            var m = BABYLON.Matrix.FromArray(array);
+
+            var regular_start = performance.now();
+            for (var index = 0; index < testsCount; index++) {
+                BABYLON.Vector3.TransformNormalFromFloatsToRef(0.1, 0.2, 0.3, m, dst);
+            }
+            var regular_duration = performance.now() - regular_start;
+            log('Scalar: ' + regular_duration + 'ms');
+
+            var simd_start = performance.now();
+            for (index = 0; index < testsCount; index++) {
+                BABYLON.Vector3.TransformNormalFromFloatsToRefSIMD(0.1, 0.2, 0.3, m, dstSIMD);
+            }
+            var simd_duration = performance.now() - simd_start;
+            log('SIMD: ' + simd_duration + 'ms');
+
+            var equal = Math.abs(dst.x - dstSIMD.x) < 0.001 && Math.abs(dst.y - dstSIMD.y) < 0.001 && Math.abs(dst.z - dstSIMD.z) < 0.001;
 
             if (equal) {
                 log("Checksums are equal.");
